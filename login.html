@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - SmartServe AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+<div class="bg-white p-10 rounded-2xl shadow-lg w-[420px] text-center">
+
+  <!-- Logo -->
+  <img src="LOGO.png" class="w-24 mx-auto mb-4">
+
+  <!-- Title -->
+  <h1 class="text-2xl font-bold mb-2">Login to SmartServe AI</h1>
+  <p class="text-gray-500 mb-4">
+    Enter your credentials to access your dashboard
+  </p>
+
+  <!-- Role Tag -->
+  <div id="roleTag"
+       class="inline-block bg-blue-100 text-blue-600 px-4 py-1 rounded-lg mb-6 text-sm">
+  </div>
+
+  <!-- Email -->
+  <div class="text-left mb-4">
+    <label class="text-gray-700">User ID / Email</label>
+    <input id="email" type="text"
+      placeholder="Enter your user ID or email"
+      class="w-full mt-1 p-3 border rounded-lg focus:outline-blue-500">
+  </div>
+
+  <!-- Password -->
+  <div class="text-left mb-2 relative">
+    <label class="text-gray-700">Password</label>
+    <input id="password" type="password"
+      placeholder="Enter your password"
+      class="w-full mt-1 p-3 border rounded-lg focus:outline-blue-500">
+
+    <!-- Eye icon -->
+    <span onclick="togglePassword()"
+      class="absolute right-3 top-10 cursor-pointer">👁</span>
+  </div>
+
+  <!-- Forgot -->
+  <div class="text-right text-sm mb-6">
+    <a href="#" class="text-blue-600 hover:underline">Forgot Password?</a>
+  </div>
+
+  <!-- Button -->
+  <button id="loginBtn"
+    class="w-full bg-blue-600 text-white py-3 rounded-xl text-lg hover:bg-blue-700">
+    Login
+  </button>
+
+  <!-- Back -->
+  <a href="role.html"
+     class="block mt-6 text-gray-500 hover:underline">
+     ← Back to Role Selection
+  </a>
+
+</div>
+
+
+<script type="module">
+
+import { auth, db } from "./firebase.js";
+
+import { signInWithEmailAndPassword } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import { collection, query, where, getDocs } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+window.addEventListener("DOMContentLoaded", () => {
+
+  const loginBtn = document.getElementById("loginBtn");
+
+  loginBtn.addEventListener("click", async () => {
+
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    if(!email || !password){
+      alert("Enter email & password");
+      return;
+    }
+
+    try {
+
+      // 🔐 LOGIN
+      await signInWithEmailAndPassword(auth, email, password);
+
+      // ✅ SAVE EMAIL (IMPORTANT)
+      localStorage.setItem("email", email);
+
+      // 🔎 GET ROLE
+      const q = query(collection(db, "users"), where("email", "==", email));
+      const snapshot = await getDocs(q);
+
+      if(snapshot.empty){
+        alert("User not found in DB");
+        return;
+      }
+
+      const userData = snapshot.docs[0].data();
+      const role = userData.role;
+
+      console.log("Logged in as:", role);
+
+      // 🚀 REDIRECT
+      if(role === "admin"){
+        window.location.href = "dashboard-admin.html";
+      }
+      else if(role === "worker"){
+        window.location.href = "dashboard-worker.html";
+      }
+      else{
+        window.location.href = "dashboard-volunteer.html";
+      }
+
+    } catch (e) {
+      alert("Login failed: " + e.message);
+      console.error(e);
+    }
+
+  });
+
+});
+
+
+// 👁 PASSWORD TOGGLE
+window.togglePassword = function () {
+  const pass = document.getElementById("password");
+  pass.type = pass.type === "password" ? "text" : "password";
+};
+
+</script>
+</body>
+</html>

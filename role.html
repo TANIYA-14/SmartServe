@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Select Role - SmartServe AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+
+<!-- Logo -->
+<img src="LOGO.png" class="w-28 mb-4">
+
+<!-- Title -->
+<h1 class="text-3xl font-bold mb-2">Login to SmartServe AI</h1>
+<p class="text-gray-500 mb-10">Select your role to continue</p>
+
+<!-- Cards -->
+<div class="grid md:grid-cols-3 gap-10 px-10">
+
+  <!-- NGO Admin -->
+  <div class="bg-white p-8 rounded-2xl shadow text-center w-80">
+    <img src="https://cdn-icons-png.flaticon.com/512/921/921347.png"
+         class="w-16 mx-auto mb-4">
+
+    <h2 class="text-xl font-semibold mb-2">NGO Admin</h2>
+    <p class="text-gray-500 mb-6">
+      Manage needs and assign volunteers
+    </p>
+
+    <button onclick="selectRole('admin')"
+      class="bg-blue-600 text-white px-6 py-3 rounded-xl w-full hover:bg-blue-700">
+      Continue
+    </button>
+  </div>
+
+  <!-- Field Worker -->
+  <div class="bg-white p-8 rounded-2xl shadow text-center w-80">
+    <img src="https://cdn-icons-png.flaticon.com/512/2921/2921222.png"
+         class="w-16 mx-auto mb-4">
+
+    <h2 class="text-xl font-semibold mb-2">Field Worker</h2>
+    <p class="text-gray-500 mb-6">
+      Submit needs from the field
+    </p>
+
+    <button onclick="selectRole('worker')"
+      class="bg-blue-600 text-white px-6 py-3 rounded-xl w-full hover:bg-blue-700">
+      Continue
+    </button>
+  </div>
+
+  <!-- Volunteer -->
+  <div class="bg-white p-8 rounded-2xl shadow text-center w-80">
+    <img src="https://cdn-icons-png.flaticon.com/512/1077/1077012.png"
+         class="w-16 mx-auto mb-4">
+
+    <h2 class="text-xl font-semibold mb-2">Volunteer</h2>
+    <p class="text-gray-500 mb-6">
+      View and complete assigned tasks
+    </p>
+
+    <button onclick="selectRole('volunteer')"
+      class="bg-blue-600 text-white px-6 py-3 rounded-xl w-full hover:bg-blue-700">
+      Continue
+    </button>
+  </div>
+
+</div>
+
+<!-- Back -->
+<a href="index.html" class="mt-10 text-gray-600 hover:underline">
+  ← Back to home
+</a>
+
+<script>
+function selectRole(role){
+  // role save
+  localStorage.setItem("role", role);
+
+  // go to login page
+  window.location.href = "login.html";
+}
+</script>
+
+</body>
+</html>

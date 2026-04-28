@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+
+<!-- Navbar -->
+<nav class="flex justify-between items-center px-10 py-4 bg-white shadow">
+  <img src="LOGO.png" class="w-32">
+  <button onclick="logout()" class="text-gray-600 hover:text-black">
+    Logout
+  </button>
+</nav>
+
+<div class="p-10">
+
+  <h1 class="text-3xl font-bold mb-8">Admin Dashboard</h1>
+
+  <!-- Filters -->
+  <div class="flex gap-4 mb-6">
+    <button onclick="loadNeeds('all')" class="bg-blue-600 text-white px-6 py-2 rounded-lg">All</button>
+    <button onclick="loadNeeds('open')" class="bg-white border px-6 py-2 rounded-lg">Open</button>
+    <button onclick="loadNeeds('assigned')" class="bg-white border px-6 py-2 rounded-lg">Assigned</button>
+    <button onclick="loadNeeds('resolved')" class="bg-white border px-6 py-2 rounded-lg">Resolved</button>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white rounded-xl shadow overflow-hidden">
+
+    <table class="w-full text-left">
+
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="p-4">Zone</th>
+          <th class="p-4">Category</th>
+          <th class="p-4">Description</th>
+          <th class="p-4">Urgency</th>
+          <th class="p-4">Status</th>
+          <th class="p-4">Action</th>
+        </tr>
+      </thead>
+
+      <tbody id="tableBody"></tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+<script>
+function logout(){
+  localStorage.clear();
+  window.location.href = "role.html";
+}
+</script>
+<script type="module">
+
+import { db } from "./firebase.js";
+import { collection, getDocs, doc, updateDoc, query, where } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const tableBody = document.getElementById("tableBody");
+
+
+// 🎯 LOAD NEEDS
+window.loadNeeds = async function(filter = "all") {
+
+  tableBody.innerHTML = "Loading...";
+
+  const snapshot = await getDocs(collection(db, "needs"));
+
+  tableBody.innerHTML = "";
+
+  snapshot.forEach((docSnap) => {
+
+    const data = docSnap.data();
+    const id = docSnap.id;
+
+    if(filter !== "all" && data.status !== filter) return;
+
+    const row = `
+      <tr class="border-t">
+        <td class="p-4 font-semibold">${data.zone}</td>
+        <td class="p-4">${data.category}</td>
+        <td class="p-4">${data.description}</td>
+
+        <td class="p-4">
+          <span class="px-3 py-1 rounded-full text-white ${getUrgencyColor(data.urgency)}">
+            ${data.urgency}
+          </span>
+        </td>
+
+        <td class="p-4">
+          <span class="px-3 py-1 rounded-full text-white ${getStatusColor(data.status)}">
+            ${data.status}
+          </span>
+        </td>
+
+        <td class="p-4">
+          ${
+            data.status === "open"
+            ? `<button onclick="findMatch('${id}', '${data.zone}', '${data.category}')"
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg">
+                Find Match
+              </button>`
+            : `<span class="text-green-600 font-semibold">
+                Assigned → ${data.assignedTo || "N/A"}
+              </span>`
+          }
+        </td>
+      </tr>
+    `;
+
+    tableBody.innerHTML += row;
+  });
+};
+
+
+// 🔍 AUTO MATCH FUNCTION
+window.findMatch = async function(needId, needZone, needCategory){
+
+  const snapshot = await getDocs(collection(db, "users"));
+
+  let best = null;
+  let bestScore = -1;
+
+  snapshot.forEach(docSnap => {
+
+    const v = docSnap.data();
+
+    if(v.role !== "volunteer" || v.available !== true) return;
+
+    let score = 0;
+
+    // zone match
+    if(v.zone === needZone) score += 3;
+
+    // skill match
+    if(v.skills && v.skills.includes(needCategory)) score += 3;
+
+    // partial match
+    if(v.skills && v.skills.some(s => needCategory.includes(s))) score += 1;
+
+    // fallback
+    score += 1;
+
+    if(score > bestScore){
+      bestScore = score;
+      best = v;
+    }
+  });
+
+  if(!best){
+    alert("No volunteer found ❌");
+    return;
+  }
+
+  // ✅ UPDATE FIRESTORE (IMPORTANT)
+ // assign need
+await updateDoc(doc(db, "needs", needId), {
+  status: "assigned",
+  assignedTo: best.email
+});
+
+// ❗ volunteer unavailable করে দাও
+await updateDoc(doc(db, "users", best.id), {
+  available: false
+});
+
+  alert("✅ Assigned to: " + best.email);
+
+  loadNeeds();
+};
+let bestList = [];
+let bestScore = -1;
+
+snapshot.forEach(docSnap => {
+
+  const v = docSnap.data();
+
+  if(v.role !== "volunteer" || v.available !== true) return;
+
+  let score = 0;
+
+  if(v.zone === needZone) score += 3;
+  if(v.skills && v.skills.includes(needCategory)) score += 3;
+
+  score += 1;
+
+  if(score > bestScore){
+    bestScore = score;
+    bestList = [{ id: docSnap.id, ...v }];
+  }
+  else if(score === bestScore){
+    bestList.push({ id: docSnap.id, ...v });
+  }
+
+});
+
+// 🔥 RANDOM PICK
+const best = bestList[Math.floor(Math.random() * bestList.length)];
+
+
+// 🎨 COLORS
+function getUrgencyColor(u){
+  if(u === "Critical") return "bg-red-500";
+  if(u === "High") return "bg-orange-500";
+  if(u === "Medium") return "bg-yellow-500";
+  return "bg-green-500";
+}
+
+function getStatusColor(s){
+  if(s === "open") return "bg-blue-500";
+  if(s === "assigned") return "bg-orange-500";
+  if(s === "resolved") return "bg-green-500";
+  return "bg-gray-500";
+}
+
+
+// 🚀 INITIAL LOAD
+loadNeeds();
+
+</script>
+</body>
+</html>

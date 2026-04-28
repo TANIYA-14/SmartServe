@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Volunteer Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+
+<!-- Navbar -->
+<nav class="flex justify-between items-center px-10 py-4 bg-white shadow">
+  <img src="LOGO.png" class="w-32">
+  <button onclick="logout()" class="text-gray-600 hover:text-black">
+    Logout
+  </button>
+</nav>
+
+<div class="p-10">
+
+  <!-- Title -->
+  <h1 class="text-3xl font-bold mb-6">Volunteer Dashboard</h1>
+
+  <!-- Profile -->
+  <div id="profile" class="bg-white p-6 rounded-xl shadow mb-8"></div>
+
+  <!-- Assigned Tasks -->
+  <h2 class="text-xl font-semibold mb-3">Assigned Tasks</h2>
+  <div id="assignedTasks" class="grid gap-4 mb-8"></div>
+
+  <!-- Completed Tasks -->
+  <h2 class="text-xl font-semibold mb-3">Completed Tasks</h2>
+  <div id="completedTasks" class="grid gap-4 mb-8"></div>
+
+  <!-- Open Tasks -->
+  <h2 class="text-xl font-semibold mb-3">Open Tasks</h2>
+  <div id="openTasks" class="grid gap-4"></div>
+
+  <!-- Top Volunteers -->
+  <h2 class="text-xl font-bold mt-10 mb-3">🏆 Top Volunteers</h2>
+  <div id="topVolunteers" class="grid gap-4"></div>
+
+</div>
+
+<!-- SCRIPT -->
+<script type="module">
+
+import { db } from "./firebase.js";
+import { collection, getDocs, query, where, doc, updateDoc } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const userEmail = localStorage.getItem("email");
+
+
+// 🔐 LOGOUT
+window.logout = function(){
+  localStorage.clear();
+  window.location.href = "role.html";
+};
+
+
+// 👤 PROFILE
+async function loadProfile(){
+
+  const q = query(collection(db, "users"), where("email","==", userEmail));
+  const snap = await getDocs(q);
+
+  snap.forEach(doc=>{
+    const data = doc.data();
+
+    document.getElementById("profile").innerHTML = `
+      <h2 class="text-xl font-bold">${data.email}</h2>
+      <p><b>Skills:</b> ${data.skills.join(", ")}</p>
+      <p class="text-green-600"><b>Best Skill:</b> ${data.skills[0]}</p>
+    `;
+  });
+
+}
+
+
+// 📌 ASSIGNED TASKS
+async function loadAssigned(){
+
+  const q = query(
+    collection(db,"needs"),
+    where("assignedTo","==", userEmail),
+    where("status","==","assigned")
+  );
+
+  const snap = await getDocs(q);
+  const box = document.getElementById("assignedTasks");
+
+  box.innerHTML = "";
+
+  snap.forEach(docSnap=>{
+    const d = docSnap.data();
+    const id = docSnap.id;
+
+    box.innerHTML += `
+      <div class="bg-white p-4 rounded-xl shadow">
+        <p><b>${d.category}</b> - ${d.zone}</p>
+        <p>${d.description}</p>
+
+        <button onclick="markComplete('${id}')"
+          class="mt-3 bg-green-500 text-white px-4 py-2 rounded">
+          ✔ Mark as Completed
+        </button>
+      </div>
+    `;
+  });
+
+}
+
+
+// 📌 COMPLETED TASKS
+async function loadCompleted(){
+
+  const q = query(
+    collection(db,"needs"),
+    where("assignedTo","==", userEmail),
+    where("status","==","completed")
+  );
+
+  const snap = await getDocs(q);
+  const box = document.getElementById("completedTasks");
+
+  box.innerHTML = "";
+
+  snap.forEach(doc=>{
+    const d = doc.data();
+
+    box.innerHTML += `
+      <div class="bg-gray-200 p-4 rounded-xl line-through">
+        <p><b>${d.category}</b> - ${d.zone}</p>
+        <p>${d.description}</p>
+      </div>
+    `;
+  });
+
+}
+
+
+// 📌 OPEN TASKS
+async function loadOpen(){
+
+  const q = query(collection(db,"needs"), where("status","==","open"));
+  const snap = await getDocs(q);
+
+  const box = document.getElementById("openTasks");
+  box.innerHTML = "";
+
+  snap.forEach(doc=>{
+    const d = doc.data();
+
+    box.innerHTML += `
+      <div class="bg-blue-100 p-4 rounded-xl">
+        <p><b>${d.category}</b> - ${d.zone}</p>
+        <p>${d.description}</p>
+      </div>
+    `;
+  });
+
+}
+
+
+// ✅ COMPLETE BUTTON
+window.markComplete = async function(id){
+
+  await updateDoc(doc(db, "needs", id), {
+    status: "completed"
+  });
+
+  alert("Task Completed ✅");
+
+  loadAssigned();
+  loadCompleted();
+};
+
+
+// 🏆 TOP VOLUNTEERS
+async function loadTopVolunteers(){
+
+  const snap = await getDocs(collection(db,"users"));
+  const box = document.getElementById("topVolunteers");
+
+  box.innerHTML = "";
+
+  snap.forEach(doc=>{
+    const d = doc.data();
+
+    if(d.role !== "volunteer") return;
+
+    box.innerHTML += `
+      <div class="bg-white p-4 rounded-xl shadow">
+        <p><b>${d.email}</b></p>
+        <p>Skills: ${d.skills.join(", ")}</p>
+        <p class="text-green-600">⭐ Best: ${d.skills[0]}</p>
+      </div>
+    `;
+  });
+
+}
+
+
+// 🚀 INIT
+loadProfile();
+loadAssigned();
+loadCompleted();
+loadOpen();
+loadTopVolunteers();
+
+</script>
+
+</body>
+</html>
